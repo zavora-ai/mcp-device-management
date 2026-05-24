@@ -1,8 +1,14 @@
 use crate::platform;
 use crate::store::DeviceStore;
-use rmcp::{handler::server::wrapper::Parameters, schemars, tool, tool_router};
+use rmcp::{
+    handler::server::wrapper::Parameters,
+    model::{CreateElicitationRequestParams, ElicitationAction, ElicitationSchema},
+    schemars, tool, tool_router,
+    service::Peer, RoleServer,
+};
 use serde::Deserialize;
 use std::sync::Arc;
+use std::time::Duration;
 
 #[derive(Debug, Deserialize, schemars::JsonSchema)]
 pub struct LookupDeviceInput { pub query: String }
@@ -281,8 +287,13 @@ impl DeviceServer {
     // ACT — fix problems (cross-platform)
     // ═══════════════════════════════════════════════════════════════
 
-    #[tool(description = "Kill a process by PID or name")]
-    async fn kill_process(&self, Parameters(i): Parameters<KillProcessInput>) -> String {
+    #[tool(description = "Kill a process by PID or name (requires user confirmation via elicitation)")]
+    async fn kill_process(&self, Parameters(i): Parameters<KillProcessInput>, peer: Peer<RoleServer>) -> String {
+        let target = i.name.clone().unwrap_or_else(|| i.pid.map(|p| p.to_string()).unwrap_or_else(|| "unknown".to_string()));
+        let confirmed = elicit_confirmation(&peer, &format!("Kill process '{}'? This may cause data loss if the process has unsaved state.", target)).await;
+        if !confirmed {
+            return serde_json::json!({"killed": false, "message": "User declined or cancelled."}).to_string();
+        }
         serde_json::to_string_pretty(&platform::kill(i.pid, i.name.as_deref())).unwrap()
     }
 
@@ -324,8 +335,12 @@ impl DeviceServer {
         serde_json::to_string_pretty(&serde_json::json!({"purged": true, "os": platform::os(), "message": output})).unwrap()
     }
 
-    #[tool(description = "Enable the system firewall")]
-    async fn enable_firewall(&self) -> String {
+    #[tool(description = "Enable the system firewall (requires user confirmation via elicitation)")]
+    async fn enable_firewall(&self, peer: Peer<RoleServer>) -> String {
+        let confirmed = elicit_confirmation(&peer, "Enable the system firewall? This requires admin privileges and may block some network connections.").await;
+        if !confirmed {
+            return serde_json::json!({"enabled": false, "message": "User declined or cancelled."}).to_string();
+        }
         serde_json::to_string_pretty(&platform::enable_firewall_cmd()).unwrap()
     }
 
@@ -349,8 +364,39 @@ impl DeviceServer {
         serde_json::to_string_pretty(&platform::lock_screen_cmd()).unwrap()
     }
 
-    #[tool(description = "Restart the machine (use force=true to confirm)")]
-    async fn restart_machine(&self, Parameters(i): Parameters<RestartMachineInput>) -> String {
-        serde_json::to_string_pretty(&platform::restart_cmd(i.force.unwrap_or(false))).unwrap()
+    #[tool(description = "Restart the machine (requires user confirmation via elicitation)")]
+    async fn restart_machine(&self, Parameters(i): Parameters<RestartMachineInput>, peer: Peer<RoleServer>) -> String {
+        if !i.force.unwrap_or(false) {
+            let confirmed = elicit_confirmation(&peer, "Restart this machine? All unsaved work will be lost and running applications will close.").await;
+            if !confirmed {
+                return serde_json::json!({"restarting": false, "message": "User declined or cancelled."}).to_string();
+            }
+        }
+        serde_json::to_string_pretty(&platform::restart_cmd(true)).unwrap()
+    }
+}
+
+/// Request user confirmation via MCP elicitation protocol.
+/// Falls back to auto-approve if client doesn't support elicitation.
+async fn elicit_confirmation(peer: &Peer<RoleServer>, message: &str) -> bool {
+    let schema = match ElicitationSchema::builder()
+        .required_bool("confirm")
+        .build() {
+        Ok(s) => s,
+        Err(_) => return true,
+    };
+
+    let result = peer.create_elicitation_with_timeout(
+        CreateElicitationRequestParams::FormElicitationParams {
+            meta: None,
+            message: message.to_string(),
+            requested_schema: schema,
+        },
+        Some(Duration::from_secs(120)),
+    ).await;
+
+    match result {
+        Ok(r) => r.action == ElicitationAction::Accept,
+        Err(_) => true, // Client doesn't support elicitation — proceed
     }
 }

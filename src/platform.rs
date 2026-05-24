@@ -279,8 +279,15 @@ pub fn empty_trash_cmd() -> Value {
 
 pub fn enable_firewall_cmd() -> Value {
     match os() {
-        "macos" => { cmd("sudo", &["/usr/libexec/ApplicationFirewall/socketfilterfw", "--setglobalstate", "on"]); json!({"enabled": true, "os": "macos"}) }
-        "linux" => { cmd("sudo", &["ufw", "enable"]); json!({"enabled": true, "os": "linux"}) }
+        "macos" => {
+            let status = cmd("defaults", &["read", "/Library/Preferences/com.apple.alf", "globalstate"]);
+            if status.trim() != "0" && !status.is_empty() {
+                json!({"enabled": true, "os": "macos"})
+            } else {
+                json!({"enabled": false, "os": "macos", "requires_admin": true, "run_manually": "sudo /usr/libexec/ApplicationFirewall/socketfilterfw --setglobalstate on"})
+            }
+        }
+        "linux" => { let status = cmd("ufw", &["status"]); if status.contains("active") { json!({"enabled": true, "os": "linux"}) } else { json!({"enabled": false, "os": "linux", "requires_admin": true, "run_manually": "sudo ufw enable"}) } }
         "windows" => { cmd("netsh", &["advfirewall", "set", "allprofiles", "state", "on"]); json!({"enabled": true, "os": "windows"}) }
         _ => json!({"error": "Unsupported OS"}),
     }
@@ -331,10 +338,9 @@ pub fn lock_screen_cmd() -> Value {
 pub fn restart_cmd(force: bool) -> Value {
     if !force { return json!({"restarting": false, "message": "Set force=true to confirm. This will close all applications."}); }
     match os() {
-        "macos" => { cmd("sudo", &["shutdown", "-r", "now"]); }
-        "linux" => { cmd("sudo", &["reboot"]); }
-        "windows" => { cmd("shutdown", &["/r", "/t", "0"]); }
-        _ => return json!({"error": "Unsupported OS"}),
+        "macos" => json!({"restarting": false, "requires_admin": true, "run_manually": "sudo shutdown -r now"}),
+        "linux" => json!({"restarting": false, "requires_admin": true, "run_manually": "sudo reboot"}),
+        "windows" => { cmd("shutdown", &["/r", "/t", "0"]); json!({"restarting": true, "os": "windows"}) }
+        _ => json!({"error": "Unsupported OS"}),
     }
-    json!({"restarting": true, "os": os()})
 }
