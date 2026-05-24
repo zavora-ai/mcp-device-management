@@ -90,6 +90,22 @@ pub struct LockScreenInput {}
 #[derive(Debug, Deserialize, schemars::JsonSchema)]
 pub struct RestartMachineInput { pub force: Option<bool> }
 
+// --- Endpoint Security + Network ---
+#[derive(Debug, Deserialize, schemars::JsonSchema)]
+pub struct GetPatchStatusInput {}
+#[derive(Debug, Deserialize, schemars::JsonSchema)]
+pub struct GetEncryptionStatusInput {}
+#[derive(Debug, Deserialize, schemars::JsonSchema)]
+pub struct ListSecurityFindingsInput {}
+#[derive(Debug, Deserialize, schemars::JsonSchema)]
+pub struct CheckVpnStatusInput {}
+#[derive(Debug, Deserialize, schemars::JsonSchema)]
+pub struct CheckFirewallRuleInput { pub port: Option<u16>, pub service: Option<String> }
+#[derive(Debug, Deserialize, schemars::JsonSchema)]
+pub struct GetNetworkOutagesInput { pub hosts: Option<Vec<String>> }
+#[derive(Debug, Deserialize, schemars::JsonSchema)]
+pub struct TestConnectivityInput { pub host: String }
+
 #[derive(Clone)]
 pub struct DeviceServer { pub store: Arc<DeviceStore> }
 
@@ -373,6 +389,141 @@ impl DeviceServer {
             }
         }
         serde_json::to_string_pretty(&platform::restart_cmd(true)).unwrap()
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // ENDPOINT SECURITY + NETWORK
+    // ═══════════════════════════════════════════════════════════════
+
+    #[tool(description = "Get OS patch status — pending updates with severity")]
+    async fn get_patch_status(&self) -> String {
+        let output = match platform::os() {
+            "macos" => platform::cmd("softwareupdate", &["-l", "--no-scan"]),
+            "linux" => platform::cmd("apt", &["list", "--upgradable"]),
+            "windows" => platform::cmd("powershell", &["-Command", "Get-HotFix | Sort-Object InstalledOn -Descending | Select-Object -First 10"]),
+            _ => String::new(),
+        };
+        let patches: Vec<&str> = output.lines().filter(|l| !l.trim().is_empty()).take(15).collect();
+        serde_json::to_string_pretty(&serde_json::json!({"os": platform::os(), "pending_patches": patches.len(), "patches": patches})).unwrap()
+    }
+
+    #[tool(description = "Get detailed encryption status — volumes, method, key type")]
+    async fn get_encryption_status(&self) -> String {
+        let output = match platform::os() {
+            "macos" => platform::cmd("fdesetup", &["status"]),
+            "linux" => platform::cmd("lsblk", &["-o", "NAME,FSTYPE,MOUNTPOINT"]),
+            "windows" => platform::cmd("manage-bde", &["-status"]),
+            _ => String::new(),
+        };
+        let detail = match platform::os() {
+            "macos" => { let users = platform::cmd("fdesetup", &["list"]); serde_json::json!({"method": "FileVault 2", "enabled": output.contains("On"), "users": users.lines().count(), "detail": output.trim()}) }
+            "linux" => serde_json::json!({"method": "LUKS", "encrypted_volumes": output.lines().filter(|l| l.contains("crypto")).count(), "detail": output.trim()}),
+            "windows" => serde_json::json!({"method": "BitLocker", "enabled": output.contains("Fully Encrypted"), "detail": output.lines().take(5).collect::<Vec<_>>().join("\n")}),
+            _ => serde_json::json!({"error": "Unsupported OS"}),
+        };
+        serde_json::to_string_pretty(&serde_json::json!({"os": platform::os(), "encryption": detail})).unwrap()
+    }
+
+    #[tool(description = "List all security findings — aggregate issues from posture, patches, ports, encryption")]
+    async fn list_security_findings(&self) -> String {
+        let mut findings: Vec<serde_json::Value> = Vec::new();
+
+        // Check firewall
+        let sec = platform::security_status();
+        if sec.get("firewall") == Some(&serde_json::json!(false)) {
+            findings.push(serde_json::json!({"severity": "high", "finding": "Firewall is disabled", "remediation": "enable_firewall"}));
+        }
+
+        // Check encryption
+        if sec.get("filevault") == Some(&serde_json::json!(false)) && sec.get("bitlocker") == Some(&serde_json::json!(false)) {
+            findings.push(serde_json::json!({"severity": "critical", "finding": "Disk encryption is disabled", "remediation": "Enable FileVault/BitLocker"}));
+        }
+
+        // Check open ports
+        let ports = platform::open_ports();
+        let port_count = ports["count"].as_u64().unwrap_or(0);
+        if port_count > 15 {
+            findings.push(serde_json::json!({"severity": "medium", "finding": format!("{} ports listening — review for unnecessary services", port_count), "remediation": "Review get_open_ports output"}));
+        }
+
+        // Check disk space
+        let stats = platform::system_stats();
+        if let Some(pct) = stats["disk"]["used_pct"].as_str() {
+            let num: u32 = pct.trim_end_matches('%').parse().unwrap_or(0);
+            if num > 90 { findings.push(serde_json::json!({"severity": "high", "finding": format!("Disk {}% full", num), "remediation": "empty_trash, purge_caches, find_large_files"})); }
+        }
+
+        serde_json::to_string_pretty(&serde_json::json!({"findings": findings, "count": findings.len(), "risk_level": if findings.iter().any(|f| f["severity"] == "critical") { "critical" } else if findings.iter().any(|f| f["severity"] == "high") { "high" } else { "low" }})).unwrap()
+    }
+
+    #[tool(description = "Check VPN connection status and details")]
+    async fn check_vpn_status(&self) -> String {
+        let output = match platform::os() {
+            "macos" => platform::cmd("scutil", &["--nc", "list"]),
+            "linux" => platform::cmd("nmcli", &["connection", "show", "--active"]),
+            "windows" => platform::cmd("rasdial", &[]),
+            _ => String::new(),
+        };
+        let connected = match platform::os() {
+            "macos" => output.lines().any(|l| l.contains("Connected")),
+            "linux" => output.contains("vpn") || output.contains("tun"),
+            "windows" => !output.contains("No connections"),
+            _ => false,
+        };
+        let connections: Vec<&str> = output.lines().filter(|l| l.contains("Connected") || l.contains("vpn") || l.contains("tun")).collect();
+        serde_json::to_string_pretty(&serde_json::json!({"os": platform::os(), "vpn_connected": connected, "connections": connections})).unwrap()
+    }
+
+    #[tool(description = "Check if a specific port or service is allowed through the firewall")]
+    async fn check_firewall_rule(&self, Parameters(i): Parameters<CheckFirewallRuleInput>) -> String {
+        let output = match platform::os() {
+            "macos" => platform::cmd("/usr/libexec/ApplicationFirewall/socketfilterfw", &["--listapps"]),
+            "linux" => platform::cmd("ufw", &["status", "numbered"]),
+            "windows" => platform::cmd("netsh", &["advfirewall", "firewall", "show", "rule", "name=all"]),
+            _ => String::new(),
+        };
+        let filter = i.service.as_deref().or(i.port.map(|p| "").or(Some(""))).unwrap_or("");
+        let rules: Vec<&str> = if filter.is_empty() {
+            output.lines().take(20).collect()
+        } else {
+            output.lines().filter(|l| l.to_lowercase().contains(&filter.to_lowercase()) || i.port.map(|p| l.contains(&p.to_string())).unwrap_or(false)).collect()
+        };
+        serde_json::to_string_pretty(&serde_json::json!({"os": platform::os(), "rules_found": rules.len(), "rules": rules})).unwrap()
+    }
+
+    #[tool(description = "Check if known services/hosts are reachable (detect outages)")]
+    async fn get_network_outages(&self, Parameters(i): Parameters<GetNetworkOutagesInput>) -> String {
+        let hosts = i.hosts.unwrap_or_else(|| vec!["google.com".into(), "github.com".into(), "1.1.1.1".into(), "8.8.8.8".into()]);
+        let mut results = Vec::new();
+        for host in &hosts {
+            let ping_result = platform::ping(host, 1);
+            let reachable = ping_result["reachable"].as_bool().unwrap_or(false);
+            results.push(serde_json::json!({"host": host, "reachable": reachable}));
+        }
+        let down: Vec<_> = results.iter().filter(|r| r["reachable"] == false).collect();
+        serde_json::to_string_pretty(&serde_json::json!({"checked": results.len(), "down": down.len(), "results": results, "outage_detected": !down.is_empty()})).unwrap()
+    }
+
+    #[tool(description = "Comprehensive connectivity test — DNS + ping + HTTP for a host")]
+    async fn test_connectivity(&self, Parameters(i): Parameters<TestConnectivityInput>) -> String {
+        let dns = platform::dns_resolve(&i.host);
+        let ping = platform::ping(&i.host, 2);
+        let url = if i.host.starts_with("http") { i.host.clone() } else { format!("https://{}", i.host) };
+        let http = platform::test_url_cmd(&url);
+
+        let dns_ok = dns["resolved"].as_bool().unwrap_or(false);
+        let ping_ok = ping["reachable"].as_bool().unwrap_or(false);
+        let http_ok = http["reachable"].as_bool().unwrap_or(false);
+
+        let diagnosis = if !dns_ok { "DNS resolution failed — check DNS settings or flush_dns" }
+            else if !ping_ok { "DNS resolves but host unreachable — network/firewall issue" }
+            else if !http_ok { "Host reachable but HTTP failed — service may be down or blocked" }
+            else { "All checks passed — connectivity is healthy" };
+
+        serde_json::to_string_pretty(&serde_json::json!({
+            "host": i.host, "dns": dns_ok, "ping": ping_ok, "http": http_ok,
+            "diagnosis": diagnosis, "details": {"dns": dns, "ping": ping["stats"], "http_status": http["status"]}
+        })).unwrap()
     }
 }
 
