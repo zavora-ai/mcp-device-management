@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 700 320" font-family="system-ui, -apple-system, sans-serif">
+<defs><linearGradient id="hg" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" style="stop-color:#7c3aed"/><stop offset="100%" style="stop-color:#4f46e5"/></linearGradient></defs>
+<rect width="700" height="320" fill="#f8fafc" rx="12"/>
+<rect x="175" y="10" width="350" height="28" rx="8" fill="url(#hg)"/>
+<text x="350" y="29" text-anchor="middle" fill="white" font-size="12" font-weight="bold">mcp-device-management — Architecture</text>
+<rect x="250" y="48" width="200" height="34" rx="8" fill="#059669"/>
+<text x="350" y="70" text-anchor="middle" fill="white" font-size="11" font-weight="bold">MCP Client / Agent</text>
+<line x1="350" y1="82" x2="350" y2="105" stroke="#64748b" stroke-width="2" marker-end="url(#a)"/>
+<rect x="125" y="110" width="450" height="75" rx="10" fill="white" stroke="#7c3aed" stroke-width="2"/>
+<rect x="125" y="110" width="450" height="22" rx="10" fill="url(#hg)"/><rect x="125" y="120" width="450" height="12" fill="url(#hg)"/>
+<text x="350" y="126" text-anchor="middle" fill="white" font-size="10" font-weight="bold">mcp-device-management (7 tools)</text>
+<rect x="140" y="140" width="90" height="16" rx="4" fill="#eef2ff"/><text x="185" y="151" text-anchor="middle" font-size="7" fill="#3730a3">lookup</text>
+<rect x="237" y="140" width="90" height="16" rx="4" fill="#eef2ff"/><text x="282" y="151" text-anchor="middle" font-size="7" fill="#3730a3">user_devices</text>
+<rect x="334" y="140" width="80" height="16" rx="4" fill="#eef2ff"/><text x="374" y="151" text-anchor="middle" font-size="7" fill="#3730a3">posture</text>
+<rect x="421" y="140" width="70" height="16" rx="4" fill="#eef2ff"/><text x="456" y="151" text-anchor="middle" font-size="7" fill="#3730a3">apps</text>
+<rect x="498" y="140" width="65" height="16" rx="4" fill="#eef2ff"/><text x="530" y="151" text-anchor="middle" font-size="7" fill="#3730a3">logs</text>
+<rect x="240" y="162" width="90" height="16" rx="4" fill="#f0fdf4"/><text x="285" y="173" text-anchor="middle" font-size="7" fill="#166534">health_check</text>
+<rect x="340" y="162" width="100" height="16" rx="4" fill="#fef3c7"/><text x="390" y="173" text-anchor="middle" font-size="7" fill="#92400e">remediation</text>
+<line x1="350" y1="185" x2="350" y2="210" stroke="#64748b" stroke-width="1.5" marker-end="url(#a)"/>
+<rect x="150" y="215" width="400" height="50" rx="8" fill="white" stroke="#d97706" stroke-width="1.5"/>
+<rect x="150" y="215" width="400" height="18" rx="8" fill="#d97706"/><rect x="150" y="223" width="400" height="10" fill="#d97706"/>
+<text x="350" y="228" text-anchor="middle" fill="white" font-size="9" font-weight="bold">MDM / Endpoint Manager</text>
+<text x="350" y="248" text-anchor="middle" font-size="8" fill="#374151">Intune · Jamf · SCCM · Kandji · Fleet</text>
+<text x="350" y="260" text-anchor="middle" font-size="7" fill="#6b7280">Inventory · Posture · Apps · Compliance · Remediation</text>
+<rect x="220" y="280" width="260" height="20" rx="10" fill="#4f46e5"/>
+<text x="350" y="294" text-anchor="middle" fill="white" font-size="9" font-weight="bold">7 Tools · Posture · Compliance · ADK-Rust Enterprise</text>
+<defs><marker id="a" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#64748b"/></marker></defs>
+</svg>
