@@ -1,6 +1,6 @@
 [package]
 name = "mcp-device-management"
-version = "1.1.0"
+version = "1.2.0"
 edition = "2021"
 authors = ["James Karanja <james.karanja@zavora.ai>"]
 description = "Device Management MCP Server — real local system detection + Intune/Jamf/Fleet/Kandji backends"
