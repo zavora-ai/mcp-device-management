@@ -1,24 +1,52 @@
 # Changelog
 
+## [1.4.0] - 2026-05-24
+
+### Added
+- 7 new tools from Endpoint Security + Network scope (total: 44)
+- `get_patch_status` — pending OS patches with severity
+- `get_encryption_status` — detailed FileVault/BitLocker/LUKS info
+- `list_security_findings` — aggregate security issues with severity and remediation
+- `check_vpn_status` — VPN connection state and details
+- `check_firewall_rule` — inspect specific firewall rules by port/service
+- `get_network_outages` — multi-host reachability check (outage detection)
+- `test_connectivity` — comprehensive DNS+ping+HTTP diagnosis with explanation
+
+### Changed
+- Now covers inventory items #18 (Device), #19 (Endpoint Security), #20 (Network)
+
+## [1.3.0] - 2026-05-24
+
+### Added
+- MCP elicitation for destructive actions (kill_process, enable_firewall, restart_machine)
+- User gets confirmation prompt before dangerous operations
+- Falls back gracefully if client doesn't support elicitation
+- Uses `Peer<RoleServer>` extractor in tool functions
+
+## [1.2.0] - 2026-05-24
+
+### Added
+- Cross-platform support via `platform.rs` dispatch module
+- macOS, Linux, Windows commands for all 37 tools
+- Package manager auto-detection: brew (macOS), apt (Linux), choco (Windows)
+
+### Changed
+- All tools dispatch to correct OS commands automatically
+- Removed all hardcoded/seeded data
+
 ## [1.1.0] - 2026-05-24
 
 ### Added
-- Cross-platform support: macOS, Linux, Windows (platform.rs dispatch module)
-- 20 new tools (8 diagnose + 12 act) — total 37 tools
-- Diagnose: ping_host, traceroute, dns_lookup, test_url, check_disk_health, get_recent_crashes, get_battery_status, get_usb_devices
-- Act: kill_process, restart_service, flush_dns, renew_dhcp, empty_trash, purge_caches, enable_firewall, brew_install, brew_upgrade, brew_uninstall, lock_screen, restart_machine
-- Package manager auto-detection: brew (macOS), apt (Linux), choco (Windows)
+- 20 new tools (8 diagnose + 12 act) — total 37
+- Diagnose: ping, traceroute, DNS, test URL, disk health, crashes, battery, USB
+- Act: kill, restart service, flush DNS, renew DHCP, empty trash, purge caches, enable firewall, brew install/upgrade/uninstall, lock screen, restart machine
 - Enterprise MDM backends: Intune, Jamf, Fleet, Kandji (feature-gated)
-- restart_machine requires force=true confirmation (safety gate)
-
-### Changed
-- All tools now dispatch to correct OS commands via platform module
-- Removed all hardcoded/seeded data — local backend reads real system info
-- Local backend auto-detects on startup (no SEED_DATA env needed)
+- Local backend reads real system info (no seeds)
 
 ## [1.0.0] - 2026-05-24
 
 ### Added
-- 17 MCP tools: observe (16) + remediation task (1)
-- Local system backend reading real macOS data
-- Device posture, compliance, health checks
+- Initial release with 7 tools
+- lookup_device, list_user_devices, get_device_posture
+- get_installed_apps, collect_device_logs, run_health_check
+- create_device_remediation_task

@@ -4,19 +4,16 @@
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 [![ADK-Rust Enterprise](https://img.shields.io/badge/ADK--Rust-Enterprise-purple.svg)](https://enterprise.adk-rust.com)
 
-Full device management for [ADK-Rust Enterprise](https://enterprise.adk-rust.com) agents. 37 MCP tools that **observe**, **diagnose**, and **act** on real devices — no mocks, no hardcoded data. Auto-detects the local machine on startup. Enterprise backends (Intune, Jamf, Fleet, Kandji) via feature flags.
+Your AI agent becomes a sysadmin. 44 MCP tools that **observe**, **diagnose**, and **act** on real devices — covering device management, endpoint security, and network operations in one server. Cross-platform (macOS, Linux, Windows), no mocks, no hardcoded data. MCP elicitation for destructive actions.
 
 ## What It Does
 
-Your AI agent becomes a sysadmin. It can check what's wrong, troubleshoot the problem, and fix it — all from natural language.
-
-```
-"Why is my machine slow?"     → get_system_stats + list_running_processes → kill_process
-"Can I reach the server?"     → ping_host + dns_lookup + test_url
-"Free up disk space"          → get_disk_usage + find_large_files + empty_trash + purge_caches
-"Is my machine secure?"       → get_security_status → enable_firewall
-"Update my packages"          → list_brew_packages(outdated) → brew_upgrade
-```
+Point it at any machine and your agent can answer:
+- "Why is my machine slow?" → check stats, find the culprit, kill it
+- "Is my machine secure?" → check encryption, firewall, patches, aggregate findings
+- "Can I reach the server?" → DNS + ping + HTTP in one call
+- "What needs updating?" → patches, brew packages, OS updates
+- "Free up disk space" → find large files, empty trash, purge caches
 
 ## Architecture
 
@@ -24,99 +21,134 @@ Your AI agent becomes a sysadmin. It can check what's wrong, troubleshoot the pr
   <img src="https://raw.githubusercontent.com/zavora-ai/mcp-device-management/main/docs/architecture.svg" alt="Device Management MCP Architecture" width="700"/>
 </p>
 
-## Tools (37)
+## Key Principles
+
+- **Real system data** — reads from actual OS commands, no mocks or seeds.
+- **Cross-platform** — macOS, Linux, Windows. Auto-detects OS and dispatches correct commands.
+- **Observe → Diagnose → Act** — full spectrum from monitoring to remediation.
+- **MCP elicitation** — destructive actions (kill, firewall, restart) prompt for user confirmation via the MCP protocol.
+- **Enterprise backends** — Intune, Jamf, Fleet, Kandji via feature flags.
+- **Merged scope** — covers Device Management (#18), Endpoint Security (#19), and Network (#20) from the ADK-Rust Enterprise inventory.
+
+## Tools (44)
 
 ### Observe (16) — see what's happening
 
-| Tool | What It Does |
-|------|-------------|
-| `lookup_device` | Find device by name/serial/ID |
-| `list_user_devices` | All devices for a user |
-| `get_device_posture` | Compliance, encryption, firewall, AV, risk score |
-| `get_installed_apps` | Applications installed |
-| `get_security_status` | FileVault, firewall, SIP, Gatekeeper |
-| `get_system_stats` | Live CPU, memory, disk, load average |
-| `list_running_processes` | Top processes by CPU or memory |
-| `get_network_info` | IP, WiFi, VPN, active connections |
-| `get_open_ports` | Listening ports and processes |
-| `collect_device_logs` | System info, storage, posture summary |
-| `run_health_check` | Overall health assessment (healthy/degraded/critical) |
-| `get_disk_usage` | Per-directory size breakdown |
-| `find_large_files` | Files over N MB |
-| `list_brew_packages` | Homebrew installed or outdated |
-| `check_os_updates` | Pending system updates |
-| `list_login_items` | Startup items and launch agents |
+| Tool | What It Does | Example |
+|------|-------------|---------|
+| `lookup_device` | Find device by name/serial/ID | "Find my MacBook" |
+| `list_user_devices` | All devices for a user | "What devices does James have?" |
+| `get_device_posture` | Compliance, encryption, AV, risk score | "Is this device compliant?" |
+| `get_installed_apps` | Applications installed | "What's installed?" |
+| `get_security_status` | FileVault/BitLocker, firewall, SIP, Gatekeeper | "Is my machine secure?" |
+| `get_system_stats` | Live CPU, memory, disk, load average | "How's my system doing?" |
+| `list_running_processes` | Top processes by CPU or memory | "What's using my CPU?" |
+| `get_network_info` | IP, WiFi, VPN, active connections | "What's my IP?" |
+| `get_open_ports` | Listening ports and processes | "What's exposed?" |
+| `collect_device_logs` | System info, storage, posture summary | "Give me a device report" |
+| `run_health_check` | Overall health (healthy/degraded/critical) | "Is this device healthy?" |
+| `get_disk_usage` | Per-directory size breakdown | "What's using my disk?" |
+| `find_large_files` | Files over N MB | "Find files over 500MB" |
+| `list_brew_packages` | Homebrew/apt/choco installed or outdated | "What's outdated?" |
+| `check_os_updates` | Pending system updates | "Any updates available?" |
+| `list_login_items` | Startup items and launch agents | "What runs at boot?" |
 
-### Diagnose (8) — troubleshoot problems
+### Diagnose (15) — troubleshoot problems
 
-| Tool | What It Does |
-|------|-------------|
-| `ping_host` | Ping with latency and packet loss |
-| `traceroute` | Network path to a host |
-| `dns_lookup` | Resolve hostname to IP |
-| `test_url` | HTTP GET with status code and response time |
-| `check_disk_health` | SMART status via diskutil |
-| `get_recent_crashes` | Recent crash reports |
-| `get_battery_status` | Charge, cycle count, condition |
-| `get_usb_devices` | Connected USB/Thunderbolt peripherals |
+| Tool | What It Does | Example |
+|------|-------------|---------|
+| `ping_host` | Ping with latency and packet loss | "Can I reach 8.8.8.8?" |
+| `traceroute` | Network path to a host | "Trace route to server" |
+| `dns_lookup` | Resolve hostname to IP | "What IP is github.com?" |
+| `test_url` | HTTP GET with status + response time | "Is the API up?" |
+| `test_connectivity` | Comprehensive DNS+ping+HTTP diagnosis | "Why can't I reach X?" |
+| `check_disk_health` | SMART status | "Is my disk failing?" |
+| `get_recent_crashes` | Recent crash reports | "What crashed recently?" |
+| `get_battery_status` | Charge, cycle count, condition | "How's my battery?" |
+| `get_usb_devices` | Connected peripherals | "What's plugged in?" |
+| `get_patch_status` | Pending patches with severity | "What patches are needed?" |
+| `get_encryption_status` | Detailed encryption info | "Is my disk encrypted?" |
+| `list_security_findings` | Aggregate security issues | "What's wrong security-wise?" |
+| `check_vpn_status` | VPN connection details | "Am I on VPN?" |
+| `check_firewall_rule` | Inspect firewall rules | "Is port 443 allowed?" |
+| `get_network_outages` | Multi-host reachability check | "Is anything down?" |
 
 ### Act (13) — fix things
 
-| Tool | What It Does | Risk |
-|------|-------------|------|
-| `kill_process` | Kill by PID or name | Medium |
-| `restart_service` | Restart a launchd service | Medium |
-| `flush_dns` | Clear DNS cache | Low |
-| `renew_dhcp` | Get fresh IP address | Low |
-| `empty_trash` | Reclaim disk space | Low |
-| `purge_caches` | Clear system + Xcode caches | Medium |
-| `enable_firewall` | Turn on macOS firewall | Low |
-| `brew_install` | Install a Homebrew package | Medium |
-| `brew_upgrade` | Upgrade packages (all or specific) | Medium |
-| `brew_uninstall` | Remove a package | Medium |
-| `lock_screen` | Lock screen immediately | Low |
-| `restart_machine` | Restart (requires force=true) | Critical |
-| `create_device_remediation_task` | Create a tracked remediation task | Low |
+| Tool | What It Does | Risk | Elicitation |
+|------|-------------|------|-------------|
+| `kill_process` | Kill by PID or name | Medium | ✓ Confirmation required |
+| `restart_service` | Restart a system service | Medium | — |
+| `flush_dns` | Clear DNS cache | Low | — |
+| `renew_dhcp` | Get fresh IP address | Low | — |
+| `empty_trash` | Reclaim disk space | Low | — |
+| `purge_caches` | Clear system caches | Medium | — |
+| `enable_firewall` | Turn on the firewall | Medium | ✓ Confirmation required |
+| `brew_install` | Install a package | Medium | — |
+| `brew_upgrade` | Upgrade packages | Medium | — |
+| `brew_uninstall` | Remove a package | Medium | — |
+| `lock_screen` | Lock screen immediately | Low | — |
+| `restart_machine` | Restart the machine | Critical | ✓ Confirmation required |
+| `create_device_remediation_task` | Create tracked remediation | Low | — |
+
+## MCP Elicitation (Human-in-the-Loop)
+
+Destructive tools use the MCP elicitation protocol to confirm with the user before executing:
+
+```
+Agent: "I'll kill the runaway process"
+  → MCP server sends elicitation request
+  → Client shows: "Kill process 'node'? This may cause data loss."
+  → User: Accept / Decline
+  → Tool proceeds or aborts
+```
+
+This works with any MCP client that supports elicitation (MCP 2025-06-18 spec). If the client doesn't support it, the tool falls back to proceeding with a warning.
 
 ## Verified Output (Real System)
 
 ```
 > get_system_stats()
-  load: { 6.37 6.46 6.69 }, mem: 87%, disk: 52%
+  load: { 5.95 6.21 6.24 }, disk: 63%, memory: 24GB, os: macos
 
-> list_running_processes(limit: 3)
-  Kiro.app — cpu=284.9% mem=0.2%
-  node — cpu=88.8% mem=0.9%
-  VirtualBuddy — cpu=11.2% mem=3.4%
+> list_security_findings()
+  2 findings, risk: high
+  • Firewall is disabled (high) → enable_firewall
+  • 20 ports listening (medium) → review get_open_ports
 
-> get_network_info()
-  ip=192.168.100.45, vpn=false, connections=59
+> test_connectivity(host: "github.com")
+  dns: true, ping: true (66ms), http: 200
+  diagnosis: "All checks passed — connectivity is healthy"
 
-> get_security_status()
-  filevault=true, firewall=false, sip=true, gatekeeper=true
+> get_patch_status()
+  • macOS Tahoe 26.5 (7.3GB, recommended, restart required)
+  • Command Line Tools for Xcode 26.5 (920MB)
 
-> ping_host(host: "google.com")
-  reachable=true, "round-trip min/avg/max = 5.2/8.1/12.3 ms"
+> get_encryption_status()
+  method: FileVault 2, enabled: true
 
-> list_brew_packages(outdated_only: true)
-  3 outdated: node@22, python@3.12, rust
-
-> get_open_ports()
-  20 listening: rapportd:49152, node:3000, postgres:5432
+> get_network_outages(hosts: ["google.com", "github.com", "nonexistent.invalid"])
+  3/4 reachable, 1 down, outage_detected: true
 ```
 
 ## Installation
 
+```bash
+cargo install mcp-device-management
+```
+
+Or build from source:
 ```bash
 git clone https://github.com/zavora-ai/mcp-device-management
 cd mcp-device-management
 cargo build --release
 ```
 
-No configuration needed — auto-detects the local machine.
+No configuration needed — auto-detects the local machine on startup.
 
-### MCP client config
+### MCP Client Config
 
+**Claude Desktop / Kiro / Cursor / Windsurf:**
 ```json
 {
   "mcpServers": {
@@ -127,15 +159,31 @@ No configuration needed — auto-detects the local machine.
 }
 ```
 
+## Cross-Platform Commands
+
+Each tool auto-detects the OS and uses the correct commands:
+
+| Operation | macOS | Linux | Windows |
+|-----------|-------|-------|---------|
+| System stats | `sysctl`, `df` | `/proc/loadavg`, `free` | `wmic` |
+| Security | `fdesetup`, `csrutil` | `ufw`, `getenforce` | `netsh`, `manage-bde` |
+| Processes | `ps aux -r` | `ps aux --sort=-%cpu` | `tasklist` |
+| Network | `ifconfig`, `scutil` | `hostname -I`, `nmcli` | `ipconfig`, `netsh` |
+| Packages | `brew` | `apt` | `choco` |
+| Kill | `kill -9` | `kill -9` | `taskkill /F` |
+| DNS flush | `dscacheutil` | `systemd-resolve` | `ipconfig /flushdns` |
+| Firewall | `socketfilterfw` | `ufw` | `netsh advfirewall` |
+| Restart | `shutdown -r` | `reboot` | `shutdown /r` |
+
 ## Enterprise Backends
 
-| Backend | Feature Flag | Env Vars |
-|---------|-------------|----------|
-| **Local** (default) | `local` | None — auto-detects |
-| **Intune** | `intune` | `INTUNE_TENANT_ID`, `INTUNE_CLIENT_ID`, `INTUNE_CLIENT_SECRET` |
-| **Jamf** | `jamf` | `JAMF_URL`, `JAMF_API_TOKEN` |
-| **Fleet** | `fleet` | `FLEET_URL`, `FLEET_API_TOKEN` |
-| **Kandji** | `kandji` | `KANDJI_URL`, `KANDJI_API_TOKEN` |
+| Backend | Feature Flag | Env Vars | Use Case |
+|---------|-------------|----------|----------|
+| **Local** (default) | `local` | None | Single machine management |
+| **Intune** | `intune` | `INTUNE_TENANT_ID`, `INTUNE_CLIENT_ID`, `INTUNE_CLIENT_SECRET` | Microsoft 365 fleet |
+| **Jamf** | `jamf` | `JAMF_URL`, `JAMF_API_TOKEN` | Apple device fleet |
+| **Fleet** | `fleet` | `FLEET_URL`, `FLEET_API_TOKEN` | Open-source osquery |
+| **Kandji** | `kandji` | `KANDJI_URL`, `KANDJI_API_TOKEN` | Apple MDM |
 
 ```bash
 cargo build --release --features all-backends
@@ -143,25 +191,34 @@ cargo build --release --features all-backends
 
 ## Governance
 
-| Risk | Tools | Notes |
-|------|-------|-------|
-| Read-only | All Observe + Diagnose tools | Safe anytime |
-| Low | flush_dns, renew_dhcp, empty_trash, enable_firewall, lock_screen | Reversible, no data loss |
-| Medium | kill_process, purge_caches, brew_install/upgrade/uninstall, restart_service | May affect running work |
-| Critical | restart_machine | Requires `force=true` confirmation |
+| Risk Level | Tools | Behavior |
+|-----------|-------|----------|
+| **Read-only** | All Observe + Diagnose | No side effects |
+| **Low** | flush_dns, renew_dhcp, empty_trash, lock_screen | Reversible, no data loss |
+| **Medium** | kill_process, purge_caches, brew_*, restart_service, enable_firewall | May affect running work |
+| **Critical** | restart_machine | Requires explicit confirmation |
+
+Tools marked with ✓ in the Elicitation column use MCP elicitation to confirm before executing.
 
 ## MCP Server Manifest
 
 ```toml
 server_id = "mcp_device_management"
 display_name = "Device Management MCP"
-version = "1.1.0"
+version = "1.4.0"
 domain = "it_operations"
 risk_level = "medium"
 writes_allowed = "gated"
 transports = ["stdio"]
-governance_gates = ["critical_actions_require_confirmation"]
+governance_gates = ["elicitation_for_destructive_actions"]
 ```
+
+## Covers Inventory Items
+
+This single MCP server covers three items from the ADK-Rust Enterprise inventory:
+- **#18 Device Management** — inventory, posture, apps, diagnostics, remediation
+- **#19 Endpoint Security** — patches, encryption, findings, compliance
+- **#20 Network** — VPN, DNS, connectivity, firewall rules, outage detection
 
 ## Contributors
 
