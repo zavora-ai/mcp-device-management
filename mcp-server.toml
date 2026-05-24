@@ -1,0 +1,144 @@
+server_id = "mcp_device_management"
+display_name = "Device Management"
+version = "1.5.0"
+domain = "endpoint-security"
+sdk_version = "0.1.0"
+risk_level = "high"
+writes_allowed = "gated"
+transports = ["stdio"]
+credentials = []
+governance_gates = ["security_review"]
+environments = ["development", "staging", "production"]
+
+[[tools]]
+name = "get_device"
+description = "Look up a device by ID, name, or serial number"
+risk_class = "read_only"
+requires_approval = false
+credential_bindings = []
+
+[[tools]]
+name = "list_user_devices"
+description = "List all devices owned by a user"
+risk_class = "read_only"
+requires_approval = false
+credential_bindings = []
+
+[[tools]]
+name = "get_security_posture"
+description = "Get device security posture — encryption, firewall, antivirus, compliance"
+risk_class = "read_only"
+requires_approval = false
+credential_bindings = []
+
+[[tools]]
+name = "list_applications"
+description = "List installed applications on a device"
+risk_class = "read_only"
+requires_approval = false
+credential_bindings = []
+
+[[tools]]
+name = "collect_diagnostics"
+description = "Collect diagnostic logs from a device"
+risk_class = "read_only"
+requires_approval = false
+credential_bindings = []
+
+[[tools]]
+name = "run_health_check"
+description = "Run a health check on a device"
+risk_class = "read_only"
+requires_approval = false
+credential_bindings = []
+
+[[tools]]
+name = "create_remediation"
+description = "Create a remediation task for a device"
+risk_class = "internal_write"
+requires_approval = true
+credential_bindings = []
+
+[[tools]]
+name = "get_system_stats"
+description = "Get live system stats — CPU, memory, disk, load average"
+risk_class = "read_only"
+requires_approval = false
+credential_bindings = []
+
+[[tools]]
+name = "list_processes"
+description = "List top running processes by CPU or memory usage"
+risk_class = "read_only"
+requires_approval = false
+credential_bindings = []
+
+[[tools]]
+name = "get_network_info"
+description = "Get network info — IP addresses, WiFi, VPN, active connections"
+risk_class = "read_only"
+requires_approval = false
+credential_bindings = []
+
+[[tools]]
+name = "get_security_status"
+description = "Get full security status — FileVault/BitLocker, firewall, SIP/SELinux"
+risk_class = "read_only"
+requires_approval = false
+credential_bindings = []
+
+[[tools]]
+name = "check_os_updates"
+description = "Check for available OS updates"
+risk_class = "read_only"
+requires_approval = false
+credential_bindings = []
+
+[[tools]]
+name = "kill_process"
+description = "Kill a process by PID or name (requires confirmation)"
+risk_class = "destructive"
+requires_approval = true
+credential_bindings = []
+
+[[tools]]
+name = "restart_service"
+description = "Restart a launchd/systemd/Windows service"
+risk_class = "internal_write"
+requires_approval = true
+credential_bindings = []
+
+[[tools]]
+name = "install_package"
+description = "Install a package (brew/apt/choco)"
+risk_class = "internal_write"
+requires_approval = true
+credential_bindings = []
+
+[[tools]]
+name = "uninstall_package"
+description = "Uninstall a package (brew/apt/choco)"
+risk_class = "destructive"
+requires_approval = true
+credential_bindings = []
+
+[[tools]]
+name = "enable_firewall"
+description = "Enable the system firewall (requires confirmation)"
+risk_class = "internal_write"
+requires_approval = true
+credential_bindings = []
+
+[[tools]]
+name = "restart_machine"
+description = "Restart the machine (requires confirmation)"
+risk_class = "destructive"
+requires_approval = true
+credential_bindings = []
+
+[[tools]]
+name = "connectivity_test"
+description = "Comprehensive connectivity test — DNS + ping + HTTP for a host"
+risk_class = "read_only"
+requires_approval = false
+credential_bindings = []

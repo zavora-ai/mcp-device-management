@@ -1,7 +1,7 @@
 [package]
 name = "mcp-device-management"
-version = "1.4.1"
-edition = "2021"
+version = "1.5.0"
+edition = "2024"
 authors = ["James Karanja <james.karanja@zavora.ai>"]
 description = "Device Management MCP Server — real local system detection + Intune/Jamf/Fleet/Kandji backends"
 license = "Apache-2.0"
@@ -30,3 +30,6 @@ chrono = { version = "0.4", features = ["serde"] }
 uuid = { version = "1", features = ["v4"] }
 anyhow = "1"
 reqwest = { version = "0.12", features = ["json", "rustls-tls"], default-features = false, optional = true }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+async-trait = "0.1"
