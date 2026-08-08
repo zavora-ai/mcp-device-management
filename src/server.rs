@@ -2,7 +2,7 @@ use crate::platform;
 use crate::store::DeviceStore;
 use rmcp::{
     handler::server::wrapper::Parameters,
-    model::{CreateElicitationRequestParams, ElicitationAction, ElicitationSchema},
+    model::{ElicitRequestParams, ElicitationAction, ElicitationSchema},
     schemars, tool, tool_router,
     service::Peer, RoleServer,
 };
@@ -538,7 +538,7 @@ async fn elicit_confirmation(peer: &Peer<RoleServer>, message: &str) -> bool {
     };
 
     let result = peer.create_elicitation_with_timeout(
-        CreateElicitationRequestParams::FormElicitationParams {
+        ElicitRequestParams::FormElicitationParams {
             meta: None,
             message: message.to_string(),
             requested_schema: schema,
