@@ -10,6 +10,12 @@ pub fn cmd(program: &str, args: &[&str]) -> String {
         .unwrap_or_default()
 }
 
+/// Quote an untrusted value as one PowerShell single-quoted literal.
+/// PowerShell represents a literal quote inside such a string as two quotes.
+pub(crate) fn powershell_literal(value: &str) -> String {
+    format!("'{}'", value.replace('\'', "''"))
+}
+
 pub fn cmd_stderr(program: &str, args: &[&str]) -> (String, String) {
     std::process::Command::new(program).args(args).output()
         .map(|o| (String::from_utf8_lossy(&o.stdout).to_string(), String::from_utf8_lossy(&o.stderr).to_string()))
@@ -180,11 +186,24 @@ pub fn dns_resolve(hostname: &str) -> Value {
 pub fn test_url_cmd(url: &str) -> Value {
     let output = match os() {
         "macos" | "linux" => cmd("curl", &["-o", "/dev/null", "-s", "-w", "%{http_code} %{time_total}", "-m", "10", url]),
-        "windows" => cmd("powershell", &["-Command", &format!("try {{ $r = Invoke-WebRequest -Uri '{}' -TimeoutSec 10 -UseBasicParsing; \"$($r.StatusCode) 0\" }} catch {{ \"0 0\" }}", url)]),
+        "windows" => cmd("powershell", &["-Command", &format!("try {{ $r = Invoke-WebRequest -Uri {} -TimeoutSec 10 -UseBasicParsing; \"$($r.StatusCode) 0\" }} catch {{ \"0 0\" }}", powershell_literal(url))]),
         _ => return json!({"error": "Unsupported OS"}),
     };
     let parts: Vec<&str> = output.split_whitespace().collect();
     json!({"url": url, "status": parts.first().unwrap_or(&"0"), "time_sec": parts.get(1).unwrap_or(&"?"), "reachable": parts.first().map(|s| *s != "000" && *s != "0").unwrap_or(false)})
+}
+
+#[cfg(test)]
+mod security_tests {
+    use super::powershell_literal;
+
+    #[test]
+    fn powershell_literal_neutralizes_quote_injection() {
+        assert_eq!(
+            powershell_literal("ok'; Remove-Item C:\\\\*; '"),
+            "'ok''; Remove-Item C:\\\\*; '''"
+        );
+    }
 }
 
 pub fn disk_health() -> Value {

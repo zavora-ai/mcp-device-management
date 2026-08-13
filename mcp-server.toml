@@ -1,17 +1,17 @@
 server_id = "mcp_device_management"
 display_name = "Device Management"
-version = "1.5.0"
+version = "1.6.0"
 domain = "endpoint-security"
-sdk_version = "0.1.0"
-risk_level = "high"
+sdk_version = "0.2.0"
+risk_level = "medium"
 writes_allowed = "gated"
 transports = ["stdio"]
 credentials = []
-governance_gates = ["security_review"]
+governance_gates = ["security_review", "mrtr_approval"]
 environments = ["development", "staging", "production"]
 
 [[tools]]
-name = "get_device"
+name = "lookup_device"
 description = "Look up a device by ID, name, or serial number"
 risk_class = "read_only"
 requires_approval = false
@@ -25,49 +25,49 @@ requires_approval = false
 credential_bindings = []
 
 [[tools]]
-name = "get_security_posture"
-description = "Get device security posture — encryption, firewall, antivirus, compliance"
+name = "get_device_posture"
+description = "Get device security posture — encryption, firewall, antivirus, OS patches, compliance state, and risk score"
 risk_class = "read_only"
 requires_approval = false
 credential_bindings = []
 
 [[tools]]
-name = "list_applications"
+name = "get_installed_apps"
 description = "List installed applications on a device"
 risk_class = "read_only"
 requires_approval = false
 credential_bindings = []
 
 [[tools]]
-name = "collect_diagnostics"
-description = "Collect diagnostic logs from a device"
+name = "collect_device_logs"
+description = "Collect diagnostic logs from a device — system log, health metrics, resource usage"
 risk_class = "read_only"
 requires_approval = false
 credential_bindings = []
 
 [[tools]]
 name = "run_health_check"
-description = "Run a health check on a device"
+description = "Run a health check on a device — verify encryption, firewall, antivirus, OS patches, and compute risk score"
 risk_class = "read_only"
 requires_approval = false
 credential_bindings = []
 
 [[tools]]
-name = "create_remediation"
-description = "Create a remediation task for a device"
+name = "create_device_remediation_task"
+description = "Create a remediation task for a device (e.g., force OS update, enable encryption, install antivirus)"
 risk_class = "internal_write"
 requires_approval = true
 credential_bindings = []
 
 [[tools]]
 name = "get_system_stats"
-description = "Get live system stats — CPU, memory, disk, load average"
+description = "Get live system stats — CPU usage, memory usage, disk usage, load average"
 risk_class = "read_only"
 requires_approval = false
 credential_bindings = []
 
 [[tools]]
-name = "list_processes"
+name = "list_running_processes"
 description = "List top running processes by CPU or memory usage"
 risk_class = "read_only"
 requires_approval = false
@@ -75,14 +75,14 @@ credential_bindings = []
 
 [[tools]]
 name = "get_network_info"
-description = "Get network info — IP addresses, WiFi, VPN, active connections"
+description = "Get network info — IP addresses, WiFi SSID, VPN status, active connections"
 risk_class = "read_only"
 requires_approval = false
 credential_bindings = []
 
 [[tools]]
 name = "get_security_status"
-description = "Get full security status — FileVault/BitLocker, firewall, SIP/SELinux"
+description = "Get full security status — FileVault/BitLocker, firewall, SIP/SELinux, Gatekeeper/Defender"
 risk_class = "read_only"
 requires_approval = false
 credential_bindings = []
@@ -95,9 +95,100 @@ requires_approval = false
 credential_bindings = []
 
 [[tools]]
+name = "list_brew_packages"
+description = "List installed packages — Homebrew (macOS), apt (Linux), Chocolatey (Windows)"
+risk_class = "read_only"
+requires_approval = false
+credential_bindings = []
+
+[[tools]]
+name = "get_disk_usage"
+description = "Get disk usage breakdown by directory"
+risk_class = "read_only"
+requires_approval = false
+credential_bindings = []
+
+[[tools]]
+name = "find_large_files"
+description = "Find large files over a given size (default 100MB)"
+risk_class = "read_only"
+requires_approval = false
+credential_bindings = []
+
+[[tools]]
+name = "list_login_items"
+description = "List login items and launch agents that run at startup"
+risk_class = "read_only"
+requires_approval = false
+credential_bindings = []
+
+[[tools]]
+name = "get_open_ports"
+description = "List open/listening network ports and their processes"
+risk_class = "read_only"
+requires_approval = false
+credential_bindings = []
+
+[[tools]]
+name = "ping_host"
+description = "Ping a host — returns latency and packet loss"
+risk_class = "read_only"
+requires_approval = false
+credential_bindings = []
+
+[[tools]]
+name = "traceroute"
+description = "Trace network path to a host"
+risk_class = "read_only"
+requires_approval = false
+credential_bindings = []
+
+[[tools]]
+name = "dns_lookup"
+description = "DNS lookup — resolve a hostname to IP addresses"
+risk_class = "read_only"
+requires_approval = false
+credential_bindings = []
+
+[[tools]]
+name = "test_url"
+description = "Test a URL — HTTP GET and return status code and response time"
+risk_class = "read_only"
+requires_approval = false
+credential_bindings = []
+
+[[tools]]
+name = "check_disk_health"
+description = "Check disk health via SMART/diskutil"
+risk_class = "read_only"
+requires_approval = false
+credential_bindings = []
+
+[[tools]]
+name = "get_recent_crashes"
+description = "Get recent application crash reports"
+risk_class = "read_only"
+requires_approval = false
+credential_bindings = []
+
+[[tools]]
+name = "get_battery_status"
+description = "Get battery status — charge level, health, cycle count"
+risk_class = "read_only"
+requires_approval = false
+credential_bindings = []
+
+[[tools]]
+name = "get_usb_devices"
+description = "List connected USB and Thunderbolt devices"
+risk_class = "read_only"
+requires_approval = false
+credential_bindings = []
+
+[[tools]]
 name = "kill_process"
-description = "Kill a process by PID or name (requires confirmation)"
-risk_class = "destructive"
+description = "Kill a process by PID or name (requires user confirmation via elicitation)"
+risk_class = "internal_write"
 requires_approval = true
 credential_bindings = []
 
@@ -109,35 +200,119 @@ requires_approval = true
 credential_bindings = []
 
 [[tools]]
-name = "install_package"
+name = "flush_dns"
+description = "Flush DNS cache — fixes stale DNS resolution"
+risk_class = "internal_write"
+requires_approval = true
+credential_bindings = []
+
+[[tools]]
+name = "renew_dhcp"
+description = "Renew DHCP lease — get a fresh IP address"
+risk_class = "internal_write"
+requires_approval = true
+credential_bindings = []
+
+[[tools]]
+name = "empty_trash"
+description = "Empty the Trash/Recycle Bin to reclaim disk space"
+risk_class = "read_only"
+requires_approval = false
+credential_bindings = []
+
+[[tools]]
+name = "purge_caches"
+description = "Purge system caches to free disk space"
+risk_class = "internal_write"
+requires_approval = true
+credential_bindings = []
+
+[[tools]]
+name = "enable_firewall"
+description = "Enable the system firewall (requires user confirmation via elicitation)"
+risk_class = "internal_write"
+requires_approval = true
+credential_bindings = []
+
+[[tools]]
+name = "brew_install"
 description = "Install a package (brew/apt/choco)"
 risk_class = "internal_write"
 requires_approval = true
 credential_bindings = []
 
 [[tools]]
-name = "uninstall_package"
-description = "Uninstall a package (brew/apt/choco)"
-risk_class = "destructive"
-requires_approval = true
-credential_bindings = []
-
-[[tools]]
-name = "enable_firewall"
-description = "Enable the system firewall (requires confirmation)"
+name = "brew_upgrade"
+description = "Upgrade packages (brew/apt/choco) — all or specific"
 risk_class = "internal_write"
 requires_approval = true
 credential_bindings = []
 
 [[tools]]
-name = "restart_machine"
-description = "Restart the machine (requires confirmation)"
-risk_class = "destructive"
+name = "brew_uninstall"
+description = "Uninstall a package (brew/apt/choco)"
+risk_class = "internal_write"
 requires_approval = true
 credential_bindings = []
 
 [[tools]]
-name = "connectivity_test"
+name = "lock_screen"
+description = "Lock the screen immediately"
+risk_class = "read_only"
+requires_approval = false
+credential_bindings = []
+
+[[tools]]
+name = "restart_machine"
+description = "Restart the machine (requires user confirmation via elicitation)"
+risk_class = "internal_write"
+requires_approval = true
+credential_bindings = []
+
+[[tools]]
+name = "get_patch_status"
+description = "Get OS patch status — pending updates with severity"
+risk_class = "read_only"
+requires_approval = false
+credential_bindings = []
+
+[[tools]]
+name = "get_encryption_status"
+description = "Get detailed encryption status — volumes, method, key type"
+risk_class = "read_only"
+requires_approval = false
+credential_bindings = []
+
+[[tools]]
+name = "list_security_findings"
+description = "List all security findings — aggregate issues from posture, patches, ports, encryption"
+risk_class = "read_only"
+requires_approval = false
+credential_bindings = []
+
+[[tools]]
+name = "check_vpn_status"
+description = "Check VPN connection status and details"
+risk_class = "read_only"
+requires_approval = false
+credential_bindings = []
+
+[[tools]]
+name = "check_firewall_rule"
+description = "Check if a specific port or service is allowed through the firewall"
+risk_class = "read_only"
+requires_approval = false
+credential_bindings = []
+
+[[tools]]
+name = "get_network_outages"
+description = "Check if known services/hosts are reachable (detect outages)"
+risk_class = "read_only"
+requires_approval = false
+credential_bindings = []
+
+[[tools]]
+name = "test_connectivity"
 description = "Comprehensive connectivity test — DNS + ping + HTTP for a host"
 risk_class = "read_only"
 requires_approval = false

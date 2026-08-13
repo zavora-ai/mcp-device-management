@@ -109,7 +109,7 @@ pub struct TestConnectivityInput { pub host: String }
 #[derive(Clone)]
 pub struct DeviceServer { pub store: Arc<DeviceStore> }
 
-#[tool_router(server_handler)]
+#[tool_router]
 impl DeviceServer {
     #[tool(description = "Look up a device by ID, name, or serial number")]
     fn lookup_device(&self, Parameters(i): Parameters<LookupDeviceInput>) -> String {
@@ -226,7 +226,7 @@ impl DeviceServer {
         let path = i.path.as_deref().unwrap_or(".");
         let min_mb = i.min_size_mb.unwrap_or(100);
         let output = if platform::os() == "windows" {
-            platform::cmd("powershell", &["-Command", &format!("Get-ChildItem -Path '{}' -Recurse -File | Where-Object {{ $_.Length -gt {}MB }} | Select-Object FullName,Length -First 20", path, min_mb)])
+            platform::cmd("powershell", &["-Command", &format!("Get-ChildItem -LiteralPath {} -Recurse -File | Where-Object {{ $_.Length -gt {}MB }} | Select-Object FullName,Length -First 20", platform::powershell_literal(path), min_mb)])
         } else {
             platform::cmd("find", &[path, "-type", "f", "-size", &format!("+{}M", min_mb), "-exec", "ls", "-lh", "{}", ";"])
         };
@@ -318,7 +318,7 @@ impl DeviceServer {
         let output = match platform::os() {
             "macos" => { platform::cmd("launchctl", &["stop", &i.service]); platform::cmd("launchctl", &["start", &i.service]) }
             "linux" => platform::cmd("sudo", &["systemctl", "restart", &i.service]),
-            "windows" => platform::cmd("powershell", &["-Command", &format!("Restart-Service '{}'", i.service)]),
+            "windows" => platform::cmd("powershell", &["-Command", &format!("Restart-Service -LiteralName {}", platform::powershell_literal(&i.service))]),
             _ => return serde_json::json!({"error": "Unsupported OS"}).to_string(),
         };
         serde_json::to_string_pretty(&serde_json::json!({"service": i.service, "restarted": true, "os": platform::os()})).unwrap()
@@ -528,13 +528,13 @@ impl DeviceServer {
 }
 
 /// Request user confirmation via MCP elicitation protocol.
-/// Falls back to auto-approve if client doesn't support elicitation.
+/// Fails closed if the schema cannot be built or the peer cannot elicit.
 async fn elicit_confirmation(peer: &Peer<RoleServer>, message: &str) -> bool {
     let schema = match ElicitationSchema::builder()
         .required_bool("confirm")
         .build() {
         Ok(s) => s,
-        Err(_) => return true,
+        Err(_) => return false,
     };
 
     let result = peer.create_elicitation_with_timeout(
@@ -548,6 +548,13 @@ async fn elicit_confirmation(peer: &Peer<RoleServer>, message: &str) -> bool {
 
     match result {
         Ok(r) => r.action == ElicitationAction::Accept,
-        Err(_) => true, // Client doesn't support elicitation — proceed
+        Err(_) => false,
     }
+}
+
+adk_mcp_sdk::mcp_2026_server! {
+    server: DeviceServer,
+    task_tools: ["collect_device_logs", "run_health_check", "create_device_remediation_task", "kill_process"],
+    approval_tools: ["create_device_remediation_task", "kill_process", "restart_service", "flush_dns", "renew_dhcp", "purge_caches", "enable_firewall", "brew_install", "brew_upgrade", "brew_uninstall", "restart_machine"],
+    cache_ttl_ms: 60_000,
 }
