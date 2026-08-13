@@ -206,7 +206,7 @@ Tools marked with ✓ in the Elicitation column use MCP elicitation to confirm b
 ```toml
 server_id = "mcp_device_management"
 display_name = "Device Management MCP"
-version = "1.4.0"
+version = "1.6.0"
 domain = "it_operations"
 risk_level = "medium"
 writes_allowed = "gated"
